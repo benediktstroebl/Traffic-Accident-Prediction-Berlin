@@ -22,27 +22,29 @@ for file in all_files:
     li.append(df)
 
 collisions = pd.concat(li, axis=0, ignore_index=True)
-collisions.rename(columns = {'BEZ':'DISTRICT', 'STRASSE':'STREET',
-                       'UJAHR':'YEAR', 'UMONAT':'MONTH',
-                       'USTUNDE':'HOUR', 'UWOCHENTAG  ':'WEEKDAY',
-                       'UKATEGORIE':'ACC_CAT',
-                       'UART':'ACC_TYPE1',
-                       'UTYP1':'ACC_TYPE2',
-                       'ULICHTVERH':'LIGHT_RATIO',
-                       'IstRad':'BIKE',
-                       'IstPKW':'CAR',
-                       'IstFuss':'FOOT',
-                       'IstKrad':'MOTOR',
-                       'IstGkfz':'VEHICLE',
-                       'IstSonstige':'OTHER',
-                       'USTRZUSTAND':'ROAD_CON'}, inplace = True)
+collisions.rename(columns = {
+                        'OBJECTID':'collision_id', 'LAND':'land',
+                        'BEZ':'district', 'STRASSE':'street',
+                       'UJAHR':'year', 'UMONAT':'month',
+                       'USTUNDE':'hour', 'UWOCHENTAG':'weekday',
+                       'UKATEGORIE':'acc_cat',
+                       'UART':'acc_type1',
+                       'UTYP1':'acc_type2',
+                       'ULICHTVERH':'light_ratio',
+                       'IstRad':'bike',
+                       'IstPKW':'car',
+                       'IstFuss':'foot',
+                       'IstKrad':'motor',
+                       'IstGkfz':'vehicle',
+                       'IstSonstige':'other',
+                       'USTRZUSTAND':'road_con'}, inplace = True)
 
 collisions.to_csv(path + "/data/output/collisions.csv")
 
 #%%
 # Create the shapefiles
 # unique objectid - 33003 rows must check further
-collisions.OBJECTID.value_counts()
+collisions.collision_id.value_counts()
 
 # geometry - latitude 13, longitude 50
 collisions.XGCSWGS84 = collisions.XGCSWGS84.astype('str').str.replace(',','.').astype('float64')
@@ -62,10 +64,13 @@ collisions_shp.to_file(path + "/data/output/collisions_shp.shp")
 
 # detailed road network
 road_gdf = gpd.read_file(path + '/data/raw/road network/shp/Detailnetz-Strassenabschnitte.shp')
+road_gdf.element_nr.value_counts() # segment id
+road_gdf.segment_id = road_gdf.reset_index()  
 road_gdf.info()
 road_gdf.head()
 road_shp = road_gdf.to_crs(4326)
 road_shp.plot()
+
 
 road_shp.to_file(path + "/data/output/road_shp.shp")
 
@@ -80,10 +85,9 @@ road_shp =  gpd.read_file(path + "/data/output/road_shp.shp")
 #trial join
 col_road_shp = collisions_shp.sjoin(road_shp, how = 'left', predicate ='intersects')
 
-
 samp = collisions_shp[collisions_shp.STREET == "Ackerstraße"]
 samp.geometry = samp.geometry.buffer(5)
 
-samp2 = samp.sjoin(road_shp, how = 'left', predicate = 'intersects')
+samp2 = samp.sjoin(road_shp, how = 'left') #, predicate = 'overlaps')
 
 samp3 = samp2[:10]
