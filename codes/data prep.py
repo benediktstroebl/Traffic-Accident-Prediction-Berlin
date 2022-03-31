@@ -25,7 +25,7 @@ for file in all_files:
 
 collisions = pd.concat(li, axis=0, ignore_index=True)
 collisions.rename(columns = {
-                        'OBJECTID':'col_id', 'LAND':'land',
+                        'OBJECTID':'objectid', 'LAND':'land',
                         'BEZ':'district', 'STRASSE':'street',
                        'UJAHR':'year', 'UMONAT':'month',
                        'USTUNDE':'hour', 'UWOCHENTAG':'weekday',
@@ -41,12 +41,17 @@ collisions.rename(columns = {
                        'IstSonstige':'other',
                        'USTRZUSTAND':'road_con'}, inplace = True)
 
+collisions = collisions.reset_index()  
+collisions.rename(columns = {'index':'col_id'}, inplace = True)
+
 collisions.to_csv(path + "/data/output/collisions.csv", index = False)
 
 #%%
 # Create the shapefiles
 # unique objectid - 33003 rows must check further
+# they are unique! take into account year var
 collisions.col_id.value_counts()
+collisions.groupby(['col_id', 'year']).ngroups
 
 # geometry - latitude 13, longitude 50
 collisions.XGCSWGS84 = collisions.XGCSWGS84.astype('str').str.replace(',','.').astype('float64')
@@ -177,8 +182,12 @@ col_road.drop(['geometry_x', 'geometry_y'], axis=1, inplace=True)
 col_road.to_csv(path + "/data/output/collisions_road.csv", index = False)
 
 # check dups
-col_road.col_id.nunique() #33003 unique collision id
+col_road.col_id.nunique() #38851 unique collision id
 col_road.segment_id.nunique() #33050 unique segment id
+
+col_road.groupby('col_id')['year'].nunique()
+
+
 
 #### end
 ###############################################################################
