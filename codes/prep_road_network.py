@@ -1,4 +1,6 @@
 # Prepare detailed road network
+# Road sections as part of the detailed road network of Berlin for traffic purposes, 
+# contains other roads and paths in addition to the classified road network.
 
 import pandas as pd
 import geopandas as gpd
@@ -8,8 +10,8 @@ path = os.getcwd()
 
 # Road network detailed
 road_gdf = gpd.read_file(path + '/data/raw/road network/shp/Detailnetz-Strassenabschnitte.shp')
-road_gdf.element_nr.value_counts() # segment id
-road_gdf = road_gdf.reset_index()  
+road_gdf.element_nr.value_counts() # element_nr unique segment id
+road_gdf = road_gdf.reset_index()  # create new segment id
 road_gdf.rename(columns = {'index':'segment_id'}, inplace = True)
 road_gdf = road_gdf.to_crs(4326)
 road_gdf.info()
