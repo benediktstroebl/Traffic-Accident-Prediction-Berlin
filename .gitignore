@@ -49,3 +49,13 @@ data/output/collisions_shp.dbf
 data/output/collisions_shp.cpg
 data/output/collisions_road.csv
 data/output/collisions.csv
+data/raw/visibility_stations.csv
+data/raw/visibility.csv
+data/raw/temperature_stations.csv
+data/raw/temperature.csv
+data/raw/precipitation_stations.csv
+data/raw/precipitation.csv
+data/output/negative_samples.csv
+data/output/df_collisions_merged.csv
+data/output/collision_temperature.csv
+data/output/collision_precipitation.csv
