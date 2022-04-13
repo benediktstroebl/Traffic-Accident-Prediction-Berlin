@@ -59,3 +59,6 @@ data/output/negative_samples.csv
 data/output/df_collisions_merged.csv
 data/output/collision_temperature.csv
 data/output/collision_precipitation.csv
+data/output/full_sample.csv
+data/output/negative_sample.csv
+data/output/positive_sample.csv
