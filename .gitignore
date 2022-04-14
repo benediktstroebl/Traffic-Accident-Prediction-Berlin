@@ -62,3 +62,12 @@ data/output/collision_precipitation.csv
 data/output/full_sample.csv
 data/output/negative_sample.csv
 data/output/positive_sample.csv
+data/output/train_data_small.csv
+data/output/train_data_big.csv
+data/output/test_data_small.csv
+data/output/test_data_big.csv
+data/output/negative_sample_large.csv
+data/output/negative_combinations.csv
+data/output/full_sample_big.csv
+data/output/full_data_small.csv
+data/output/full_data_big.csv
