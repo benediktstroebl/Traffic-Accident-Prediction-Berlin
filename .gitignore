@@ -71,3 +71,9 @@ data/output/negative_combinations.csv
 data/output/full_sample_big.csv
 data/output/full_data_small.csv
 data/output/full_data_big.csv
+data/raw/weather/visibility_stations.csv
+data/raw/weather/visibility.csv
+data/raw/weather/temperature_stations.csv
+data/raw/weather/temperature.csv
+data/raw/weather/precipitation_stations.csv
+data/raw/weather/precipitation.csv
