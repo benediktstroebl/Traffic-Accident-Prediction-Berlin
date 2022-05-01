@@ -12,12 +12,9 @@ import fiona
 from shapely.geometry import shape, Point, LineString
 import pyproj
 
-#sys.path.append(os.getcwd() + "/Machine-Learning-Project-Group-F/codes")
-#from prep_collisions import df_to_gdf
-
-#%%
 path = os.getcwd()
 
+#%%
 def df_to_gdf(df, projection, geometry):
     crs = {'init': projection}
     gdf = gpd.GeoDataFrame(df, crs = crs, geometry = geometry)
@@ -45,7 +42,7 @@ def point_to_segment(gdf_point, gdf_segment, buffer):
     """
     # project to use meters in buffer
     col_data = gdf_point[['col_id','street','geometry']].to_crs(epsg=3174)
-    road_data = gdf_segment[['segment_id','bezirk', 'stadtteil', 'strassenna','geometry']].to_crs(epsg=3174)
+    road_data = gdf_segment[['segment_id','bezirk', 'stadtteil', 'strassenna','geometry', 'length_m', 'side_strt', 'mid_lat', 'mid_lon']].to_crs(epsg=3174)
     
     # set buffer to 150 meters - to avoid NaN values, set higher buffer, likely more intersect/ roads tagged
     col_data['geometry'] = col_data.geometry.buffer(buffer)
@@ -90,34 +87,116 @@ def plot_test(gdf, distance, street_name, segment_id = None): # choose only one 
     return intersect_plot
 #%%
 collisions_shp = gpd.read_file(path + "/data/output/collisions_shp.shp")
-road_shp =  gpd.read_file(path + "/data/output/road_shp.shp")
+road_segments_shp =  gpd.read_file(path + "/data/output/road_segments_shp.shp")
 
 #%%
 collisions_shp.info()
-road_shp.info()
+road_segments_shp.info()
 
-#%% save plots
+#%% MATCHING STARTING FROM 5 METERS UP TO 20 METERS   
+# Matching using 5 meters buffer
+collisions_shp['year'] = collisions_shp['year'].astype(int)
+
+# match collision points (all years) to detail road segments
+col_segment_pair = point_to_segment(collisions_shp, road_segments_shp, 5)    
+col_segment_pair.segment_id.isna().sum()
+
+col_segment_pair_matched = col_segment_pair[col_segment_pair.segment_id.notna()]
+
+#%%
+col_segment_pair_unmatched = col_segment_pair[col_segment_pair.segment_id.isna()].iloc[:,0:7]
+col_segment_pair_unmatched = col_segment_pair_unmatched.rename(columns={'geometry_x': 'geometry'})
+col_segment_pair_unmatched = df_to_gdf(col_segment_pair_unmatched , 'epsg:4326', col_segment_pair_unmatched.geometry)
+
+#%% Matching using 10 meters buffer to unmatched
+col_segment_pair2 = point_to_segment(col_segment_pair_unmatched, road_segments_shp, 10)   
+col_segment_pair2.segment_id.isna().sum() 
+
+col_segment_pair2_matched = col_segment_pair2[col_segment_pair2.segment_id.notna()]
+
+#%%
+col_segment_pair2_unmatched = col_segment_pair2[col_segment_pair2.segment_id.isna()].iloc[:,0:7]
+col_segment_pair2_unmatched = col_segment_pair2_unmatched.rename(columns={'geometry_x': 'geometry'})
+col_segment_pair2_unmatched = df_to_gdf(col_segment_pair2_unmatched , 'epsg:4326', col_segment_pair2_unmatched.geometry)
+
+#%% Matching using 15 meters buffer to unmatched
+col_segment_pair3 = point_to_segment(col_segment_pair2_unmatched, road_segments_shp, 15)   
+col_segment_pair3.segment_id.isna().sum() 
+
+col_segment_pair3_matched = col_segment_pair3[col_segment_pair3.segment_id.notna()]
+
+#%%
+col_segment_pair3_unmatched = col_segment_pair3[col_segment_pair3.segment_id.isna()].iloc[:,0:7]
+col_segment_pair3_unmatched = col_segment_pair3_unmatched.rename(columns={'geometry_x': 'geometry'})
+col_segment_pair3_unmatched = df_to_gdf(col_segment_pair3_unmatched , 'epsg:4326', col_segment_pair3_unmatched.geometry)
+
+#%% Matching using 20 meters buffer to unmatched
+col_segment_pair4 = point_to_segment(col_segment_pair3_unmatched, road_segments_shp, 20)   
+col_segment_pair4.segment_id.isna().sum() 
+
+col_segment_pair4_matched = col_segment_pair4[col_segment_pair4.segment_id.notna()]
+
+col_segment_pair4_unmatched = col_segment_pair4[col_segment_pair4.segment_id.isna()].iloc[:,0:7]
+
+
+#%% append all matched collisions minus the 51 unmatched
+col_segment_pairs_fin2 = col_segment_pair_matched.append(col_segment_pair2_matched).append(col_segment_pair3_matched).append(col_segment_pair4_matched)
+
+len(col_segment_pairs_fin2['segment_id'].unique())
+len(col_segment_pairs_fin2['col_id'].unique())
+
+#%% count number of that happened on the road segment
+
+col_segment_pairs_fin2['collision'] = 1
+
+count2018 = pd.DataFrame(col_segment_pairs_fin2[col_segment_pairs_fin2['year']==2018].groupby(['segment_id'])['collision'].sum()).reset_index()
+count2018['year'] = 2018
+
+count2019 = pd.DataFrame(col_segment_pairs_fin2[col_segment_pairs_fin2['year']<=2019].groupby(['segment_id'])['collision'].sum()).reset_index()
+count2019['year'] = 2019
+
+count2020 = pd.DataFrame(col_segment_pairs_fin2[col_segment_pairs_fin2['year']<=2020].groupby(['segment_id'])['collision'].sum()).reset_index()
+count2020['year'] = 2020
+
+count_df = count2018.append(count2019).append(count2020)
+count_df.rename(columns = {'collision':'collision_cnt'}, inplace=True)
+
+
+col_segment_pairs_cnt = col_segment_pairs_fin2.merge(count_df, how = "left", on = ['segment_id', 'year'])   
+
+col_segment_pairs_fin = col_segment_pairs_cnt[['col_id', 'segment_id', 'collision_cnt']]
+
+#%%
+# save col_segment_pairs_fin 52,118
+#col_segment_pairs_fin.to_csv(path + "/data/output/col_segment_pairs.csv", index = False)
+
+col_segment_pairs_fin.to_csv(path + "/data/processed/col_segment_pairs.csv", index = False)
+
+
+#%%
+# Change buffer to 51 unmatched - append back to col_road
+#col_road_na = col_road[col_segment_pair_unmatched].iloc[:, 0:7]
+#col_road_na = df_to_gdf(col_road_na , 'epsg:4326', col_road_na.geometry_x)
+#col_road4 = point_to_segment(col_road_na, road_shp, 30) 
+#col_road4.segment_id.isna().sum() # 15 missing using 30 buffer
+
+#%%
+###############################################################################
+# Save GeoDataFrame - with 51 unmatched
+#col_road_fin = pd.DataFrame(col_road)
+#col_road_fin.drop(['geometry_x', 'geometry_y'], axis=1, inplace=True) 
+#col_road_fin.to_csv(path + "/data/output/collisions_road.csv", index = False)
+#%%
+
+
+#%% save plots for report
 collisions_shp.plot(color="red", markersize = 0.1, alpha = 0.3)
 
 collisions_shp[collisions_shp['year']=="2018"].plot(color="red", markersize = 0.1)
 collisions_shp[collisions_shp['year']=="2019"].plot(color="red", markersize = 1)
 collisions_shp[collisions_shp['year']=="2020"].plot(color="red", markersize = 1)
 
-road_shp.plot(markersize = 0.001, alpha = 0.3)
-
-
-#%%    
-col_road = point_to_segment(collisions_shp, road_shp, 20)    
-col_road.segment_id.isna().sum()  # 51 missing matched using 20 buffer
-
-col_road.groupby(['segment_id'])['col_id'].nunique().reset_index()
-
-col_road['segment_id'].value_counts()
-col_road['col_id'].value_counts()
-
-col_road2 = point_to_segment(collisions_shp, road_shp, 2)  
-
-col_road3 = point_to_segment(collisions_shp, road_shp, 10)  
+road_segments_shp.plot(markersize = 0.001, alpha = 0.3)
 
 
 #%%
@@ -125,51 +204,6 @@ col_road3 = point_to_segment(collisions_shp, road_shp, 10)
 streets = col_road.groupby(['segment_id'])['col_id'].nunique().reset_index().sort_values(by = ['col_id'], ascending = False)
 plot_test(gdf = col_road, distance = 0, street_name = None, segment_id = 39275.0)
 plot_test(gdf = col_road, distance = 19, street_name = None, segment_id = 39275.0)
-
-#%%
-streets = col_road.groupby(['street'])['col_id'].nunique().reset_index().sort_values(by = ['col_id'], ascending = False)
-
-plot_test(gdf = col_road, distance = 0, street_name = "Alt-Kaulsdorf")
-
-plot_test(gdf = col_road3, distance = 0, street_name = "Alt-Kaulsdorf")
-
-
-plot_test(gdf = col_road2, distance = 0, street_name = "Alt-Kaulsdorf")
-
-
-
-
-#%%
-# Change buffer to 51 unmatched - append back to col_road
-col_road_na = col_road[col_road.segment_id.isna()].iloc[:, 0:7]
-col_road_na = df_to_gdf(col_road_na , 'epsg:4326', col_road_na.geometry_x)
-col_road4 = point_to_segment(col_road_na, road_shp, 30) 
-col_road4.segment_id.isna().sum() # 15 missing using 30 buffer
-
-#%%
-streets2 = col_road4.groupby(['street'])['col_id'].nunique().reset_index().sort_values(by = ['col_id'], ascending = False)
-plot_test(col_road4, 0, "Alexanderplatzviertel")
-
-plot_test(col_road4, 0, "Königin-Elisabeth-Straße")
-
-
-
-streets_na = col_road_na.groupby(['street'])['col_id'].nunique().reset_index().sort_values(by = ['col_id'], ascending = False)
-
-#%%
-streets2 = col_road2.groupby(['segment_id'])['col_id'].nunique().reset_index().sort_values(by = ['col_id'], ascending = False)
-plot_test(col_road2, 0, None, 6730)
-
-#%%
-###############################################################################
-# Save GeoDataFrame - with 51 unmatched
-col_road_fin = pd.DataFrame(col_road)
-col_road_fin.drop(['geometry_x', 'geometry_y'], axis=1, inplace=True) 
-col_road_fin.to_csv(path + "/data/output/collisions_road.csv", index = False)
-#%%
-
-
-
 
 
 

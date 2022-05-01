@@ -9,6 +9,9 @@ import pandas as pd
 import geopandas as gpd
 import os
 import shapely
+import numpy as np
+#import pygeos
+
 #%%
 path = os.getcwd()
 
@@ -23,38 +26,75 @@ road_gdf = road_gdf.to_crs(4326)
 #%%
 # segment length in meters - almost equal to "laenge" variable, confirms in meters
 road_gdf['length_m'] = road_gdf.to_crs(3174).length 
+road_shp = road_gdf.to_crs(4326)
+# save road_shp with linestrings as geometry
+road_shp.to_file(path + "/data/output/road_shp.shp", index = False)
 
+#%% tag if main street  or side street
+surface_gdf = gpd.read_file(path + '/data/output/surface_shp.shp')
+#road_shp = gpd.read_file(path + "/data/output/road_shp.shp")
+
+#road_surface = gpd.sjoin(surface_gdf, road_shp,  how='left', predicate = "intersects")
+#road_surface.segment_id.isna().sum() 
+
+# 153 side street, 9 main street
+#road_surface[road_surface.segment_id.isna()].groupby(['NAM'])['surface_id'].nunique() 
+#surface_gdf.groupby(['NAM'])['surface_id'].nunique().reset_index() 
+
+# for unmatched assign 5% probability of being main street
+road_surface = gpd.sjoin(road_shp, surface_gdf,  how='left', predicate = "intersects").drop_duplicates(subset = "segment_id", keep = "first")
+road_surface.surface_id.isna().sum()  #2785 unmatched
+
+street_append = road_surface[road_surface.surface_id.isna()][["segment_id"]]
+street_append = street_append.reset_index(drop=True)
+
+street_append.segment_id.isna().sum()
+
+import random
+random.seed(28)
+x=random.choices([0,1], weights = [153, 9], k = 2785)
+street_type = pd.DataFrame(x, columns = ['side_street'])
+#street_type = street_type.reset_index()  
+
+street_assign = pd.concat([street_append, street_type], axis=1, ignore_index=True)
+street_assign = street_assign.rename(columns={street_assign.columns[0]: 'segment_id',
+                                              street_assign.columns[1]: 'side_street'})
+
+surface_gdf.groupby(['NAM'])['surface_id'].nunique().reset_index()
+
+road_surface['side_street'] = np.where(road_surface['NAM'] == "Nebenstraße", 1,0)
+
+road_type = road_surface.merge(street_assign, how = "left", on = "segment_id")
+road_type['side_strt'] =road_type['side_street_x'].fillna(0) + road_type['side_street_y'].fillna(0)
+road_type = road_type[['segment_id', 'surface_ar', 'side_strt']]
+
+
+#%%
 # return the midpoint of a segment
 road_gdf['midpoint'] = road_gdf.centroid 
 
-# merge with road width
-road_width = pd.read_csv(path + "/data/output/road_width.csv")
-road_gdf = road_gdf.merge(road_width, how="left", on = "segment_id")
+road_gdf['mid_lat'] = road_gdf.centroid.x
 
-road_shp = road_gdf.to_crs(4326)
+road_gdf['mid_lon'] = road_gdf.centroid.y
+
+road_gdf_merged = road_gdf.merge(road_type, how = "left", on = "segment_id")
+
 #%%
-# Save
-road_gdf.to_csv(path + "/data/output/road_segments.csv", index = False)
+# Save csv with midpoint, road length, street type
+#road_gdf_merged.to_csv(path + "/data/output/road_segments.csv", index = False) # with the midpoint in csv format
 
-#road_shp = road_gdf.to_crs(4326)
-#road_shp.drop(['midpoint'], axis=1, inplace=True) # saving to shapefile only takes 1 geom
-#road_shp.to_file(path + "/data/output/road_shp.shp", index = False)
+road_gdf_merged.to_csv(path + "/data/processed/road_segments.csv", index = False) # with the midpoint in csv format
 
+#%%
+# Save road_shp with road length, surface area, street type
+road_segments_shp2 = road_shp.merge(road_type[["segment_id", "surface_ar", "side_strt"]], how = "left", on = "segment_id") # without midpoint in .shp format
+road_segments_shp = road_segments_shp2.merge(road_gdf[["segment_id", "mid_lat", "mid_lon"]], how = "left", on = "segment_id") # without midpoint in .shp format
 
+road_segments_shp.to_file(path + "/data/output/road_segments_shp.shp", index = False) # with linestrings as geometry
 
-road_shp.drop(['geometry'], axis=1, inplace=True) # saving to shapefile only takes 1 geom
-road_shp = road_shp.set_geometry(road_shp['midpoint'])
-
-road_shp.rename(columns = {'midpoint':'geometry'}, inplace = True)
-road_shp = road_shp.iloc[:,0:19]
-
-road_shp = gpd.GeoDataFrame(road_shp.set_geometry(road_shp['midpoint']))
-
-road_shp.to_file(path + "/data/output/road_shp2.shp", index = False)
+#%%
 
 ###############################
-
-
 # Check midpoints - correct
 #def df_to_gdf(df, projection, geometry):
 #    crs = {'init': projection}
