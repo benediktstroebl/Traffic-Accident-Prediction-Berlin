@@ -73,7 +73,10 @@ collisions_shp.plot(color="red")
 
 #%%
 # Save collisions dataframe
-collisions.to_csv(path + "/data/output/collisions.csv", index = False)
+#collisions.to_csv(path + "/data/output/collisions.csv", index = False)
+
+collisions.to_csv(path + "/data/processed/collisions.csv", index = False)
+
 collisions_shp.to_file(path + "/data/output/collisions_shp.shp", index = False)
 
 #%%
