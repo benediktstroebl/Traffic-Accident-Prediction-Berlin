@@ -22,38 +22,28 @@ pd.set_option('display.max_columns', 10)
 
 #training data
 path = os.getcwd()
-train = pd.read_csv(path + "/data/train_data_big.csv")
-
+df = pd.read_csv(path + "/data/full_sample.csv")
+train = df[df["year"] != 2020]
 
 #quick look
 train.head()
 train.info()
 train.describe()
 
-###accident count per road segment
-##accident_segment = train.groupby(["segment_id"])["collision"].value_counts()#.reset_index()
-##accident_segment = pd.DataFrame(accident_segment)
-##accident_segment.rename(columns={ accident_segment.columns[0]: "accident_no" }, inplace=True)
-##accident_segment = accident_segment.reset_index()
-##accident_segment.sort_values(["accident_no"], ascending=False)
-
 
 #categorical data
 train["collision"].value_counts()
-train["day"].value_counts()
-train.groupby(["day"])["collision"].value_counts()
-train.groupby(["day"])["collision"].value_counts(normalize=True)
+train["weekday"].value_counts()
+train.groupby(["weekday"])["collision"].value_counts()
+train.groupby(["weekday"])["collision"].value_counts(normalize=True)
 
 #correlation matrix
-#from pandas.plotting import scatter_matrix
-
-#train = train.merge(accident_segment[["segment_id", "accident_no"]], how="left", on="segment_id")
 
 cor_matrix = train.corr()
 cor_matrix["collision"].sort_values(ascending=False)
 
 #histograms
-best = ["collision_cnt", "sun_elevation_angle", "temperature", "visibility", "humidity", "hour_cos"]
+best = ["collision_cnt", "sun_elevation_angle", "temparature", "visibility", "humidity", "prec_height", "prec_duration", "side_strt"]
 
 train.hist(column=best)
 plt.show()
@@ -63,7 +53,7 @@ plt.close()
 segments = pd.read_csv(path + "/data/road_segments.csv")
 
 collision_cnt = train.groupby(["segment_id"])[["collision_cnt"]].median() #to get number of collisions per segment
-collision_cnt.rename(columns={ accident_segment.columns[0]: "collision_cnt" }, inplace=True)
+#collision_cnt.rename(columns={accident_segment.columns[0]: "collision_cnt" }, inplace=True)
 collision_cnt = collision_cnt.reset_index()
 
 segments_plot = segments.merge(collision_cnt[["segment_id", "collision_cnt"]], left_on="segment_id", right_on="segment_id", how="left")
