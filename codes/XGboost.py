@@ -174,3 +174,11 @@ print("Precision XGB:", metrics.precision_score(y, y_predict_xgb))
 print("Recall XGB:", metrics.recall_score(y, y_predict_xgb))
 print("ROC_AUC XGB:",metrics.roc_auc_score(y, y_predict_xgb))
 print("PR_ROC XGB:", metrics.average_precision_score(y, y_predict_xgb))
+
+#test data
+y_predict_test = xgb_final.predict(X_test)
+
+print("Precision XGB:", metrics.precision_score(y_test, y_predict_test))
+print("Recall XGB:", metrics.recall_score(y_test, y_predict_test))
+print("ROC_AUC XGB:",metrics.roc_auc_score(y_test, y_predict_test))
+print("PR_ROC XGB:", metrics.average_precision_score(y_test, y_predict_test))
