@@ -36,7 +36,7 @@ import xgboost as xgb
 from sklearn.model_selection import GridSearchCV
 from sklearn import metrics
 
-#plot function
+#plot function, code adapted from: https://stackoverflow.com/questions/37161563/how-to-graph-grid-scores-from-gridsearchcv
 def plot_search_results(grid, title):
     """
     Params:
@@ -82,14 +82,6 @@ csv.fit(X, y)
 csv.cv_results_
 print("Best parameters:", csv.best_params_)
 print("Best score:", csv.best_score_)
-
-###def results_to_table(grid):
-###    grid = grid.cv_results_
-###    param = grid["params"]
-###    mean_score = grid["mean_test_score"]
-###
-###    table = pd.DataFrame(param, mean_score)
-###    return table
 
 #save round 1 results:
 grid_1 = pd.DataFrame({"param" : csv.cv_results_["params"], "mean_score" : csv.cv_results_["mean_test_score"] ,
