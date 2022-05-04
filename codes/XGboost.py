@@ -3,50 +3,27 @@ import os
 
 #training data
 path = os.getcwd()
-train = pd.read_csv(path + "/data/train_data_big.csv")
-train_na = train.dropna()
+df = pd.read_csv(path + "/data/full_sample.csv")
 
-X = train_na.drop(columns=["collision", "year_2018", "year_2019", "segment_id"], axis=1)
-y = train_na["collision"].copy()
+train = df[df["year"] != 2020]
+test = df[df["year"] == 2020]
+
+#column selection
+X = train.drop(columns=["collision", "year", "segment_id"], axis=1)
+X = X.loc[:, ~X.columns.str.contains('^Unnamed')]
+
+y = train["collision"].copy()
 
 #test data
-test = pd.read_csv(path + "/data/test_data_big.csv").dropna()
-X_test = test[['hour_cos', 'hour_sin', 'month_cos', 'month_sin','collision_cnt']].copy()
+X_test = test.drop(columns=["collision", "year", "segment_id"], axis=1)
+X_test = X_test.loc[:, ~X_test.columns.str.contains('^Unnamed')]
 y_test = test["collision"].copy()
 
-from sklearn.model_selection import train_test_split
-X_train, X_validate, y_train, y_validate = train_test_split(X, y, test_size=0.3, random_state=1505)
-
-#ADA boost
-from sklearn.ensemble import AdaBoostClassifier
-from sklearn.tree import DecisionTreeClassifier
-from sklearn import metrics
-
-ada_clf = AdaBoostClassifier(
-    DecisionTreeClassifier(max_depth=1), n_estimators=50,
-    algorithm="SAMME.R", learning_rate=0.5, random_state=1505)
-ada_clf.fit(X_train, y_train)
-y_predict = ada_clf.predict(X_validate) #validation data
-X_predict = ada_clf.predict(X_train) #training data
-
-#training data
-print("Accuracy:", metrics.accuracy_score(y_train, X_predict))
-print("Recall:", metrics.recall_score(y_train, X_predict))
-
-#validation data
-print("Accuracy:", metrics.accuracy_score(y_validate, y_predict))
-print("Recall:", metrics.recall_score(y_validate, y_predict))
-
-
-ada_clf.score(X, y)
-
-#accuracy
-print(ada_clf.score(X, y))
-#ROC_AUC
-print(roc_auc_score(y, ada_clf.decision_function(X)))
 
 #logit baseline - to check
 from sklearn.linear_model import LogisticRegression
+from sklearn import metrics
+
 X_baseline = X[['hour_cos', 'hour_sin', 'month_cos', 'month_sin','collision_cnt']]
 lm_clf = LogisticRegression(solver='liblinear', C=10, random_state=0).fit(X_baseline, y)
 y_predict_lm = lm_clf.predict(X_baseline)
@@ -54,63 +31,146 @@ print("Accuracy (logit baseline):", metrics.accuracy_score(y, y_predict_lm),
       "Precision (logit baseline)", metrics.precision_score(y, y_predict_lm),
       "Recall (logit baseline):", metrics.recall_score(y, y_predict_lm))
 
-####XGboost: logit baseline model
+####XGboost grid search
 import xgboost as xgb
 from sklearn.model_selection import GridSearchCV
+from sklearn import metrics
 
-#maximising recall score
+#plot function
+def plot_search_results(grid, title):
+    """
+    Params:
+        grid: A trained GridSearchCV object.
+    """
+    ## Results from grid search
+    results = grid.cv_results_
+    means_test = results['mean_test_score']
+    stds_test = results['std_test_score']
 
-#set folds?
+    ## Getting indexes of values per hyper-parameter
+    masks=[]
+    masks_names= list(grid.best_params_.keys())
+    for p_k, p_v in grid.best_params_.items():
+        masks.append(list(results['param_'+p_k].data==p_v))
 
-#best params: depth: 3; child_weight: 1, scale_pos_weight: 5
+    params=grid.param_grid
 
-#Round 1
-cv_params = {'max_depth': [3, 6, 9], 'min_child_weight': [0.5, 1, 2], "scale_pos_weight" : [50, 100, 150]}    # parameters to be tries in the grid search
-fix_params = {'learning_rate': 0.2, 'n_estimators': 100, 'objective': 'binary:logistic'}   #other parameters, fixed for the moment
-csv = GridSearchCV(xgb.XGBClassifier(**fix_params, seed=1505), param_grid=cv_params, scoring='f1', cv=5, verbose=3)
+    ## Ploting results
+    fig, ax = plt.subplots(1,len(params),sharex='none', sharey='all',figsize=(20,5))
+    fig.suptitle(title)
+    fig.text(0.08, 0.5, 'Mean score', va='center', rotation='vertical')
+    pram_preformace_in_best = {}
+    for i, p in enumerate(masks_names):
+        m = np.stack(masks[:i] + masks[i+1:])
+        pram_preformace_in_best
+        best_parms_mask = m.all(axis=0)
+        best_index = np.where(best_parms_mask)[0]
+        x = np.array(params[p])
+        y_1 = np.array(means_test[best_index])
+        e_1 = np.array(stds_test[best_index])
+        ax[i].errorbar(x, y_1, e_1, linestyle='--', marker='o', label='test')
+        ax[i].set_xlabel(p.upper())
 
-csv.fit(X_baseline, y)
+    plt.show()
+
+#Round 1 - max_depth and min_child weight
+cv_params = {'max_depth': [1, 2, 3, 4, 5, 6], 'min_child_weight': [1, 2, 3, 4]} # parameters to be tried in the grid search
+fix_params = {'learning_rate': 0.2, 'n_estimators': 100, "scale_pos_weight": 20, 'objective': 'binary:logistic'}   #other parameters, fixed for the moment
+csv = GridSearchCV(xgb.XGBClassifier(**fix_params, seed=1505), param_grid=cv_params, scoring='average_precision', cv=5, verbose=3)
+
+csv.fit(X, y)
 csv.cv_results_
 print("Best parameters:", csv.best_params_)
-print("F1:", csv.best_score_)
+print("Best score:", csv.best_score_)
 
-best_param_f_1 = {'max_depth': 3, 'min_child_weight': 2, 'scale_pos_weight': 50, 'learning_rate': 0.2, 'n_estimators': 100, 'objective': 'binary:logistic'}
+###def results_to_table(grid):
+###    grid = grid.cv_results_
+###    param = grid["params"]
+###    mean_score = grid["mean_test_score"]
+###
+###    table = pd.DataFrame(param, mean_score)
+###    return table
 
-#Round 2
-cv_params = {"max_depth": [1, 2, 3, 4, 5], "scale_pos_weight": [30, 40, 50, 60, 70]}
-fix_params = {'learning_rate': 0.2, 'n_estimators': 100, "min_child_weight": 2, 'objective': 'binary:logistic'}   #other parameters, fixed for the moment
-csv = GridSearchCV(xgb.XGBClassifier(**fix_params, seed=1505), param_grid=cv_params, scoring='f1', cv=5, verbose=3)
+#save round 1 results:
+grid_1 = pd.DataFrame({"param" : csv.cv_results_["params"], "mean_score" : csv.cv_results_["mean_test_score"] ,
+                       "std_score" : csv.cv_results_["std_test_score"], "fit_time" : csv.cv_results_["mean_fit_time"]})
+grid_1.to_csv("C:\python-projects\Tables\grid_search_1.csv")
 
-csv.fit(X_baseline, y)
-csv.cv_results_
-print("Best parameters:", csv.best_params_)
-print("F1:", csv.best_score_)
+#plot round 1 results:
+plot_search_results(csv, "a) First grid search")
+plt.savefig("C:\python-projects\Figures\Grid_search_1.png")   # save the figure to file
+plt.close()
 
-best_param_f_2 = {'max_depth': 1, 'min_child_weight': 2, 'scale_pos_weight': 30, 'learning_rate': 0.2, 'n_estimators': 100, 'objective': 'binary:logistic'}
+best_param_1 = {'max_depth': 1, 'min_child_weight': 1, 'scale_pos_weight': 20, 'learning_rate': 0.2, 'n_estimators': 100, 'objective': 'binary:logistic'}
 
-#Round 3...
+###Round 2
+cv_params = {"learning_rate": [0.01, 0.05, 0.1, 0.15, 0.2], "n_estimators": [50, 60, 70, 80, 90, 100, 110, 120, 130]}
+fix_params = {'max_depth': 1, 'min_child_weight': 1, "scale_pos_weight": 20, 'objective': 'binary:logistic'}   #other parameters, fixed for the moment
+csv_2 = GridSearchCV(xgb.XGBClassifier(**fix_params, seed=1505), param_grid=cv_params, scoring='average_precision', cv=5, verbose=3)
 
-best_param_recall = {'max_depth': 3, 'min_child_weight': 1, 'scale_pos_weight': 150}
-best_param_f1 = {'max_depth': 3, 'min_child_weight': 2, 'scale_pos_weight': 50, 'learning_rate': 0.2, 'n_estimators': 100, 'objective': 'binary:logistic'}
-best_param_roc = {'max_depth': 3, 'min_child_weight': 1, 'scale_pos_weight': 150, 'learning_rate': 0.2, 'n_estimators': 100, 'objective': 'binary:logistic'}
+csv_2.fit(X, y)
+csv_2.cv_results_
+print("Best parameters:", csv_2.best_params_)
+print("Best score:", csv_2.best_score_)
+
+#save round 2 results:
+grid_2 = pd.DataFrame({"param" : csv_2.cv_results_["params"], "mean_score" : csv_2.cv_results_["mean_test_score"] ,
+                       "std_score" : csv_2.cv_results_["std_test_score"], "fit_time" : csv_2.cv_results_["mean_fit_time"]})
+grid_2.to_csv("C:\python-projects\Tables\grid_search_2.csv")
+
+#plot round 2
+plot_search_results(csv_2, "b) Second grid search")
+plt.savefig("C:\python-projects\Figures\Grid_search_2.png")   # save the figure to file
+plt.close()
+
+best_param_2 = {'max_depth': 1, 'min_child_weight': 2, 'scale_pos_weight': 20, 'learning_rate': 0.1, 'n_estimators': 110, 'objective': 'binary:logistic'}
+
+#Round 3
+cv_params = {"scale_pos_weight" : [1, 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
+fix_params = {'max_depth': 1, 'min_child_weight': 2, 'learning_rate': 0.1,
+              'n_estimators': 110, 'objective': 'binary:logistic'}  #other parameters, fixed for the moment
+csv_3 = GridSearchCV(xgb.XGBClassifier(**fix_params, seed=1505), param_grid=cv_params, scoring='average_precision', cv=5, verbose=3)
+
+csv_3.fit(X, y)
+csv_3.cv_results_
+print("Best parameters:", csv_3.best_params_)
+print("Best score:", csv_3.best_score_)
+
+#save round 3 results:
+grid_3 = pd.DataFrame({"param" : csv_3.cv_results_["params"], "mean_score" : csv_3.cv_results_["mean_test_score"] ,
+                       "std_score" : csv_3.cv_results_["std_test_score"], "fit_time" : csv_3.cv_results_["mean_fit_time"]})
+grid_3.to_csv("C:\python-projects\Tables\grid_search_3.csv")
+
+####plot round 2
+###plot_search_results(csv_3, "b) Second grid search")
+###plt.savefig("C:\python-projects\Figures\Grid_search_2.png")   # save the figure to file
+###plt.close()
+
+best_param_3 = {'max_depth': 1, 'min_child_weight': 2, 'scale_pos_weight': 1, 'learning_rate': 0.1, 'n_estimators': 110, 'objective': 'binary:logistic'}
+
 
 ####fit and test
 
-#cross validation
-data_dmatrix = xgb.DMatrix(data=X_baseline, label=y)
-xgb_cv = xgb.cv(dtrain=data_dmatrix, params=best_param_f_2, nfold=3, num_boost_round=50,
-            early_stopping_rounds=10, metrics="auc", as_pandas=True, seed=1505)
+from sklearn.model_selection import cross_validate
+xgb_final = xgb.XGBClassifier(**best_param_3)
+
+cv_final = cross_validate(xgb_final, X, y, scoring=["precision", "recall", "roc_auc", "average_precision", "f1"], cv=5)
+
+#prints cross-validated evaluation scores
+for key in cv_final:
+    print(key, cv_final[key].mean())
 
 #normal test
-xgb_clf2 = xgb.XGBClassifier(**best_param_f_2)
-xgb_clf2.fit(X_baseline, y)
-y_predict_xgb = xgb_clf2.predict(X_baseline) #on the train data
+xgb_final.fit(X, y)
+y_predict_xgb = xgb_final.predict(X) #on the train data
 
-xgb.plot_importance(xgb_clf2)
+xgb.plot_importance(xgb_final)
 plt.figure(figsize = (16, 12))
 plt.show()
+plt.close()
 
 #train data
 print("Precision XGB:", metrics.precision_score(y, y_predict_xgb))
 print("Recall XGB:", metrics.recall_score(y, y_predict_xgb))
 print("ROC_AUC XGB:",metrics.roc_auc_score(y, y_predict_xgb))
+print("PR_ROC XGB:", metrics.average_precision_score(y, y_predict_xgb))

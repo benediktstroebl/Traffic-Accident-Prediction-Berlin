@@ -28,7 +28,9 @@ train = df[df["year"] != 2020]
 #quick look
 train.head()
 train.info()
-train.describe()
+describe = train.describe().round(3)
+describe = describe.T
+#describe.to_csv("C:\python-projects\Tables\descriptive.csv")
 
 
 #categorical data
