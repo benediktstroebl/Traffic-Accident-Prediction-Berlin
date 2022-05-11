@@ -47,7 +47,13 @@ cor_matrix["collision"].sort_values(ascending=False)
 #histograms
 best = ["collision_cnt", "sun_elevation_angle", "temparature", "visibility", "humidity", "prec_height", "prec_duration", "side_strt"]
 
-train.hist(column=best)
+#train.hist(column=best)
+
+train_all = train.loc[:, ~train.columns.str.contains('^Unnamed')]
+train_all = train_all.drop(columns=["segment_id", "year"], axis=1)
+train_all.rename(columns={"temparature": "temperature"}, errors="raise")
+train_all.hist()
+plt.savefig("C:\python-projects\Figures\histograms.png")
 plt.show()
 plt.close()
 
@@ -65,11 +71,12 @@ from shapely import wkt
 segments_plot['geometry'] = segments_plot['geometry'].apply(wkt.loads)
 segments_gdf = gpd.GeoDataFrame(segments_plot, crs='epsg:3174')
 
-fig, axs = plt.subplots(nrows=2, sharex=True, sharey=True, figsize=(15,15))
-axs[0].set_title("Road segments with the highest number of accidents (n=1500)")
-axs[1].set_title("Road segments with no accidents (n=1500, random selection)")
-segments_gdf.nlargest(1500, "collision_cnt").plot(ax=axs[0], color="red", markersize=0.2, alpha=0.3)
-segments_gdf[segments_gdf["collision_cnt"] == 0].sample(n=1500, random_state=1505).plot(ax=axs[1], color="blue", markersize=0.2, alpha=0.3)
+fig, axs = plt.subplots(nrows=2, sharex=True, sharey=True, figsize=(10,10))
+#axs[0].set_title("Road segments with the highest number of accidents (n=1300)")
+#axs[1].set_title("Road segments with no accidents (n=1300, random selection)")
+segments_gdf.nlargest(1300, "collision_cnt").plot(ax=axs[0], color="red", markersize=0.2, alpha=0.8)
+segments_gdf[segments_gdf["collision_cnt"] == 0].sample(n=1300, random_state=1505).plot(ax=axs[1], color="blue", markersize=0.4, alpha=0.8)
+#plt.savefig("C:\python-projects\Figures\segments.png")
 plt.show()
 plt.close()
 
