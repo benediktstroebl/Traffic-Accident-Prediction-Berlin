@@ -1,13 +1,11 @@
 High-resolution traffic accident prediction in Berlin
 =====================================================
-Machine Learning
-We trained several machine learning models to predict the risk of occurrence of a traffic accident on a road segment for a given hour and day in Berlin.
 
 <H1 align="center">
     <img href="" src="https://github.com/aneleh-cikab/distill-template/blob/225f9230b6ecdac949d736864ca72fc4f59d762b/figures/berlin_accident.jpg" width="450px">
 </H1>
     
-Our product delivers an interactive world map where users can **visualize the top headlines per country**, within fourteen countries from the Group of Twenty (G20) intergovernmental forum. The target user is someone interested in knowing what is going on from **multicultural worldview**, with it being specially useful for scholars in the fields of public policy and international affairs.
+Traffic accidents are one of the leading causes of death and injuries globally, and in Germany they cause over 3,000 deaths and 300,000 injuries yearly. Studying traffic accidents and where and why they happen can help policy makers make our roads safer. Therefore, we built and trained several machine learning models to predict the risk of occurrence of a traffic accident on a road segment for a given hour and day in Berlin. Form this analysis, local policy-makers can derive valuable insights into which factors determine dangerous road segments and when and where collisions are more likely to happen.
 
 **Take a look our project presentation slides** to get a better overview about the project <a href="https://github.com/benediktstroebl/Machine-Learning-Project-Group-F/blob/5b21e6ebf7b6df23e150918128c9aa951f85235b/project%20presentation%20slides/Group%20F_presentation_slides_Arbo_Bakic_Str%C3%B6bl.pdf">**here!**</a>
 
