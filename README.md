@@ -4,12 +4,12 @@ Machine Learning
 We trained several machine learning models to predict the risk of occurrence of a traffic accident on a road segment for a given hour and day in Berlin.
 
 <H1 align="center">
-    <img href="" src="https://github.com/aneleh-cikab/distill-template/blob/225f9230b6ecdac949d736864ca72fc4f59d762b/figures/berlin_accident.jpg" width="600px">
+    <img href="" src="https://github.com/aneleh-cikab/distill-template/blob/225f9230b6ecdac949d736864ca72fc4f59d762b/figures/berlin_accident.jpg" width="450px">
 </H1>
     
 Our product delivers an interactive world map where users can **visualize the top headlines per country**, within fourteen countries from the Group of Twenty (G20) intergovernmental forum. The target user is someone interested in knowing what is going on from **multicultural worldview**, with it being specially useful for scholars in the fields of public policy and international affairs.
 
-Take a look our presentation to get a better overview about the project <a href="https://github.com/benediktstroebl/Machine-Learning-Project-Group-F/blob/5b21e6ebf7b6df23e150918128c9aa951f85235b/project%20presentation%20slides/Group%20F_presentation_slides_Arbo_Bakic_Str%C3%B6bl.pdf">**here!**</a>
+**Take a look our project presentation slides** to get a better overview about the project <a href="https://github.com/benediktstroebl/Machine-Learning-Project-Group-F/blob/5b21e6ebf7b6df23e150918128c9aa951f85235b/project%20presentation%20slides/Group%20F_presentation_slides_Arbo_Bakic_Str%C3%B6bl.pdf">**here!**</a>
 
 ## Data
 
