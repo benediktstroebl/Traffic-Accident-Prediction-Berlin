@@ -33,7 +33,7 @@ We conducted this study using the example of accidents in Berlin using the follo
 
 ## Authors
 
-- [@GamesluxX](https://www.github.com/@GamesluxX)
+- [@GamesluxX](https://www.github.com/@benediktstroebl)
 - [@adellegia](https://www.github.com/adellegia)
 - [@aneleh-cikab](https://www.github.com/aneleh-cikab)
   
